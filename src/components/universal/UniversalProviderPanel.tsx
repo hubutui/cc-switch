@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Layers } from "lucide-react";
+import { Layers, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { UniversalProviderCard } from "./UniversalProviderCard";
@@ -166,6 +167,32 @@ export function UniversalProviderPanel() {
     [providers],
   );
 
+  // 同步所有供应商
+  const [syncingAll, setSyncingAll] = useState(false);
+  const handleSyncAll = useCallback(async () => {
+    const ids = Object.keys(providers);
+    if (ids.length === 0) return;
+
+    setSyncingAll(true);
+    try {
+      await Promise.all(ids.map((id) => universalProvidersApi.sync(id)));
+      toast.success(
+        t("universalProvider.syncedAll", {
+          defaultValue: "已同步所有统一供应商到各应用",
+        }),
+      );
+    } catch (error) {
+      console.error("Failed to sync all universal providers:", error);
+      toast.error(
+        t("universalProvider.syncAllError", {
+          defaultValue: "同步所有统一供应商失败",
+        }),
+      );
+    } finally {
+      setSyncingAll(false);
+    }
+  }, [providers, t]);
+
   // 复制供应商
   const handleDuplicate = useCallback(
     async (provider: UniversalProvider) => {
@@ -228,6 +255,26 @@ export function UniversalProviderPanel() {
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
           {providerList.length}
         </span>
+        {providerList.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto"
+            disabled={syncingAll}
+            onClick={handleSyncAll}
+          >
+            <RefreshCw
+              className={`mr-1.5 h-3.5 w-3.5 ${syncingAll ? "animate-spin" : ""}`}
+            />
+            {syncingAll
+              ? t("universalProvider.syncingAll", {
+                  defaultValue: "同步中...",
+                })
+              : t("universalProvider.syncAll", {
+                  defaultValue: "同步所有",
+                })}
+          </Button>
+        )}
       </div>
 
       {/* 描述 */}
